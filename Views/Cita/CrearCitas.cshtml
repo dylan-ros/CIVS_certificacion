@@ -1,0 +1,1440 @@
+﻿@model CIVS_certi.Models.Cita
+
+@{
+    ViewData["Title"] = "Programar cita";
+    var especialidades = ViewBag.Especialidades as List<CIVS_certi.Models.Especialidad> ?? new();
+}
+
+@if (TempData["Success"] != null)
+{
+    <div style="position:fixed; top:20px; right:20px; z-index:9999; min-width:320px; max-width:420px;">
+        <div class="alert alert-success alert-dismissible fade show shadow" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div style="position:fixed; top:20px; right:20px; z-index:9999; min-width:320px; max-width:420px;">
+        <div class="alert alert-danger alert-dismissible fade show shadow" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+}
+
+@if (!ViewData.ModelState.IsValid)
+{
+    var errores = ViewData.ModelState.Values.SelectMany(v => v.Errors).ToList();
+    if (errores.Any())
+    {
+        <div class="alert alert-danger mt-3">
+            @foreach (var e in errores)
+            {
+                <div>@e.ErrorMessage</div>
+            }
+        </div>
+    }
+}
+
+<style>
+    #calendario {
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        font-size: .82rem;
+    }
+
+    .fc .fc-toolbar {
+        padding: 0 0 12px 0;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .fc .fc-toolbar-title {
+        font-size: 1rem !important;
+        font-weight: 600;
+        color: #1a5c38;
+    }
+
+    .fc .fc-button {
+        background: #fff !important;
+        border: 1.5px solid #d4e4da !important;
+        color: #1a5c38 !important;
+        border-radius: 8px !important;
+        font-size: .78rem !important;
+        font-weight: 500 !important;
+        padding: 4px 12px !important;
+        box-shadow: none !important;
+        transition: all .15s !important;
+    }
+
+        .fc .fc-button:hover {
+            background: #e8f5ee !important;
+            border-color: #2d8653 !important;
+        }
+
+    .fc .fc-button-active,
+    .fc .fc-button-primary:not(:disabled).fc-button-active {
+        background: #1a5c38 !important;
+        border-color: #1a5c38 !important;
+        color: #fff !important;
+    }
+
+    .fc .fc-today-button {
+        background: #e8f5ee !important;
+        border-color: #2d8653 !important;
+        color: #1a5c38 !important;
+    }
+
+    .fc .fc-col-header-cell {
+        background: #f8fdfb;
+        border-bottom: 2px solid #d4e4da !important;
+        padding: 6px 0 !important;
+    }
+
+    .fc .fc-col-header-cell-cushion {
+        color: #1a5c38;
+        font-weight: 600;
+        font-size: .8rem;
+        text-decoration: none !important;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .fc .fc-timegrid-slot-label-cushion {
+        color: #6b8f7a;
+        font-size: .75rem;
+        font-weight: 500;
+        padding-right: 10px !important;
+    }
+
+    .fc .fc-timegrid-slot {
+        height: 42px !important;
+    }
+
+    .fc td, .fc th {
+        border-color: #e8f0ec !important;
+    }
+
+    .fc .fc-timegrid-now-indicator-line {
+        border-color: #e53e3e !important;
+        border-width: 2px !important;
+    }
+
+    .fc .fc-timegrid-now-indicator-arrow {
+        border-top-color: #e53e3e !important;
+        border-bottom-color: #e53e3e !important;
+    }
+
+    .fc .fc-day-today {
+        background: #f0faf4 !important;
+    }
+
+        .fc .fc-day-today .fc-col-header-cell-cushion {
+            color: #1a5c38;
+            background: #e8f5ee;
+            border-radius: 20px;
+            padding: 2px 10px;
+        }
+
+    .fc-event {
+        border-radius: 6px !important;
+        border: none !important;
+        padding: 3px 6px !important;
+        font-size: .74rem !important;
+        font-weight: 500 !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,.12) !important;
+        overflow: hidden !important;
+    }
+
+        .fc-event .fc-event-main {
+            padding: 0 !important;
+        }
+
+        .fc-event .fc-event-title {
+            font-weight: 600 !important;
+            white-space: normal !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            line-height: 1.15 !important;
+        }
+
+        .fc-event .fc-event-time {
+            font-size: .70rem !important;
+            opacity: .9;
+            font-weight: 600 !important;
+        }
+
+        .fc-event.fc-preview-event,
+        .fc-event.fc-preview-event .fc-event-main,
+        .fc-event.fc-preview-event .fc-event-main-frame {
+            background-color: #8b5cf6 !important;
+            background: #8b5cf6 !important;
+            border-color: #7c3aed !important;
+            border-left: 3px solid #7c3aed !important;
+            color: #ffffff !important;
+            animation: pulso .8s ease-in-out infinite alternate;
+        }
+
+        .fc-event.fc-programada-event,
+        .fc-event.fc-programada-event .fc-event-main,
+        .fc-event.fc-programada-event .fc-event-main-frame {
+            background-color: #f3df9b !important;
+            background: #f3df9b !important;
+            border-color: #e0c35a !important;
+            border-left: 3px solid #e0c35a !important;
+            color: #7a5a00 !important;
+        }
+
+        .fc-event.fc-confirmada-event,
+        .fc-event.fc-confirmada-event .fc-event-main,
+        .fc-event.fc-confirmada-event .fc-event-main-frame {
+            background-color: #3b82f6 !important;
+            background: #3b82f6 !important;
+            border-color: #2563eb !important;
+            border-left: 3px solid #2563eb !important;
+            color: #ffffff !important;
+        }
+
+        .fc-event.fc-atendida-event,
+        .fc-event.fc-atendida-event .fc-event-main,
+        .fc-event.fc-atendida-event .fc-event-main-frame {
+            background-color: #10b981 !important;
+            background: #10b981 !important;
+            border-color: #059669 !important;
+            border-left: 3px solid #059669 !important;
+            color: #ffffff !important;
+        }
+
+        .fc-event.fc-noasistio-event,
+        .fc-event.fc-noasistio-event .fc-event-main,
+        .fc-event.fc-noasistio-event .fc-event-main-frame {
+            background-color: #6b7280 !important;
+            background: #6b7280 !important;
+            border-color: #4b5563 !important;
+            border-left: 3px solid #4b5563 !important;
+            color: #ffffff !important;
+        }
+
+    @@keyframes pulso {
+        from {
+            opacity: 1;
+        }
+
+        to {
+            opacity: .75;
+        }
+    }
+
+    .fc .fc-highlight {
+        background: rgba(99,102,241,.15) !important;
+        border-radius: 4px;
+    }
+
+    .fc .fc-scroller {
+        overflow-y: auto !important;
+        scrollbar-width: thin;
+        scrollbar-color: #cde8d8 #f8fdfb;
+    }
+
+        .fc .fc-scroller::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .fc .fc-scroller::-webkit-scrollbar-track {
+            background: #f8fdfb;
+        }
+
+        .fc .fc-scroller::-webkit-scrollbar-thumb {
+            background: #b0d4be;
+            border-radius: 10px;
+        }
+
+    .fc .fc-timegrid-body {
+        overflow: visible !important;
+    }
+
+    .fc .fc-daygrid-day-number {
+        color: #1a5c38;
+        font-weight: 500;
+        text-decoration: none !important;
+    }
+
+    .fc .fc-daygrid-day:hover {
+        background: #f0faf4 !important;
+    }
+
+    .fc .fc-bg-event.fc-disponible-bg {
+        background: #cfe8d5 !important;
+        opacity: 1 !important;
+    }
+
+    .buscador-resultados {
+        position: absolute;
+        z-index: 1050;
+        background: #fff;
+        border: 1.5px solid #d4e4da;
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgba(0,0,0,.10);
+        max-height: 220px;
+        overflow-y: auto;
+        min-width: 100%;
+        scrollbar-width: thin;
+        scrollbar-color: #cde8d8 #f8fdfb;
+    }
+
+        .buscador-resultados::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .buscador-resultados::-webkit-scrollbar-thumb {
+            background: #b0d4be;
+            border-radius: 10px;
+        }
+
+    .resultado-item {
+        cursor: pointer;
+        border-bottom: 1px solid #f0f4f2;
+        font-size: .82rem;
+        padding: 8px 12px;
+        transition: background .1s;
+    }
+
+        .resultado-item:last-child {
+            border-bottom: none;
+        }
+
+        .resultado-item:hover {
+            background: #f0faf4;
+        }
+
+    .seleccionado-badge {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f0faf4;
+        border: 1.5px solid #cfeedd;
+        border-radius: 8px;
+        padding: 6px 12px;
+        margin-top: 6px;
+    }
+
+    #resumen-horario {
+        min-height: 150px;
+        display: flex;
+        align-items: stretch;
+        justify-content: stretch;
+        background: #fbfdfb;
+        border: 1px solid #d9e3dc !important;
+        padding: 0 !important;
+        overflow: hidden;
+    }
+
+    .resumen-card {
+        width: 100%;
+        padding: 12px 14px;
+        text-align: left;
+    }
+
+    .resumen-titulo {
+        font-weight: 700;
+        color: #1a5c38;
+        font-size: .92rem;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .resumen-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .resumen-item {
+        background: #ffffff;
+        border: 1px solid #e4efe8;
+        border-radius: 10px;
+        padding: 8px 10px;
+    }
+
+    .resumen-label {
+        display: block;
+        font-size: .72rem;
+        font-weight: 700;
+        color: #6b8f7a;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+
+    .resumen-value {
+        font-size: .82rem;
+        color: #22352b;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .resumen-vacio {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: #7a8f82;
+        padding: 16px;
+        font-size: .82rem;
+    }
+</style>
+
+<form asp-action="CrearCitas" asp-controller="Cita" method="post" class="mt-3" id="formCita">
+    @Html.AntiForgeryToken()
+    <input asp-for="CitaFechaInicio" type="hidden" id="inputInicio" />
+    <input asp-for="CitaFechafin" type="hidden" id="inputFin" />
+
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="bg-white border rounded-4 shadow-sm p-4">
+
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge rounded-pill"
+                          style="background:#e9f7ef; color:#1e7e34; border:1px solid #cfeedd;">
+                        Front Office
+                    </span>
+                    <span class="text-muted small">Citas</span>
+                </div>
+
+                <h2 class="fw-semibold mb-4" style="color:#1e7e34; font-size:1.2rem;">
+                    Programar nueva cita
+                </h2>
+
+                <div class="alert alert-light border mb-2" id="resumen-horario">
+                    <div class="resumen-vacio">
+                        Seleccioná un horario en el calendario →
+                    </div>
+                </div>
+
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm w-100 mb-4 d-none"
+                        id="btnLimpiarHorario"
+                        onclick="limpiarHorarioSeleccionado()">
+                    Quitar horario seleccionado
+                </button>
+
+                <div class="mb-4">
+                    <h3 class="h6 fw-semibold mb-2">Especialidad</h3>
+                    <div class="d-flex flex-column gap-1">
+                        <div class="form-check">
+                            <input class="form-check-input especialidad-radio"
+                                   type="radio"
+                                   name="especialidadFiltro"
+                                   value=""
+                                   id="esp-todas"
+                                   checked />
+                            <label class="form-check-label small" for="esp-todas">
+                                Todas las especialidades
+                            </label>
+                        </div>
+
+                        @foreach (var esp in especialidades)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input especialidad-radio"
+                                       type="radio"
+                                       name="especialidadFiltro"
+                                       value="@esp.EspecialidadId"
+                                       id="esp-@esp.EspecialidadId" />
+                                <label class="form-check-label small" for="esp-@esp.EspecialidadId">
+                                    @esp.EspecialidadNombre
+                                </label>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                <div class="mb-3 position-relative">
+                    <label class="form-label fw-semibold small">
+                        Paciente <span class="text-danger">*</span>
+                    </label>
+
+                    <input asp-for="PacienteId" type="hidden" id="PacienteId" />
+
+                    <input type="text"
+                           id="buscarPaciente"
+                           class="form-control form-control-sm"
+                           placeholder="Buscá por nombre, apellido o DPI..."
+                           autocomplete="off" />
+
+                    <div id="resultadosPaciente" class="buscador-resultados" style="display:none;"></div>
+
+                    <div id="pacienteSeleccionado" class="seleccionado-badge" style="display:none;">
+                        <span class="small fw-semibold" style="color:#1a5c38;" id="nombrePacienteSeleccionado"></span>
+                        <button type="button"
+                                class="btn-close"
+                                style="font-size:.6rem;"
+                                onclick="limpiarPaciente()"
+                                title="Cambiar paciente"></button>
+                    </div>
+
+                    <span asp-validation-for="PacienteId" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3 position-relative">
+                    <label class="form-label fw-semibold small">
+                        Médico <span class="text-danger">*</span>
+                    </label>
+
+                    <input asp-for="MedicoId" type="hidden" id="MedicoId" />
+
+                    <input type="text"
+                           id="buscarMedico"
+                           class="form-control form-control-sm"
+                           placeholder="Buscá por nombre, apellido o colegiado..."
+                           autocomplete="off" />
+
+                    <div id="resultadosMedico" class="buscador-resultados" style="display:none;"></div>
+
+                    <div id="medicoSeleccionado" class="seleccionado-badge" style="display:none;">
+                        <span class="small fw-semibold" style="color:#1a5c38;" id="nombreMedicoSeleccionado"></span>
+                        <button type="button"
+                                class="btn-close"
+                                style="font-size:.6rem;"
+                                onclick="limpiarMedico()"
+                                title="Cambiar médico"></button>
+                    </div>
+
+                    <span asp-validation-for="MedicoId" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="CitaMotivo" class="form-label fw-semibold small">
+                        Motivo de consulta <span class="text-danger">*</span>
+                    </label>
+
+                    <textarea asp-for="CitaMotivo"
+                              id="CitaMotivo"
+                              class="form-control form-control-sm"
+                              rows="3"
+                              placeholder="Describa el motivo de la cita..."></textarea>
+
+                    <span asp-validation-for="CitaMotivo" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-muted small fw-semibold mb-2">Leyenda</p>
+
+                    <div class="d-flex flex-column gap-1">
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="width:12px;height:12px;border-radius:3px;background:#cfe8d5;border:1px solid #6eae7c;display:inline-block;"></span>
+                            <span class="small text-muted">Horario disponible</span>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="width:12px;height:12px;border-radius:3px;background:#8b5cf6;display:inline-block;"></span>
+                            <span class="small text-muted">Tu selección actual</span>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="width:12px;height:12px;border-radius:3px;background:#f3df9b;display:inline-block;"></span>
+                            <span class="small text-muted">Programada</span>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="width:12px;height:12px;border-radius:3px;background:#3b82f6;display:inline-block;"></span>
+                            <span class="small text-muted">Confirmada</span>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="width:12px;height:12px;border-radius:3px;background:#10b981;display:inline-block;"></span>
+                            <span class="small text-muted">Atendida</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100" id="btnGuardar">
+                        Guardar cita
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                        Cancelar
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="bg-white border rounded-4 shadow-sm p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h3 class="h6 fw-semibold mb-0" style="color:#1e7e34;">
+                        Agenda de citas
+                    </h3>
+                    <span class="text-muted small">
+                        Clic y arrastrá para seleccionar | Doble clic para quitar
+                    </span>
+                </div>
+
+                <div id="calendario"></div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="tooltip-cita"
+     style="display:none; position:fixed; z-index:9999;
+            background:#1e293b; color:#fff; border-radius:8px;
+            padding:10px 14px; font-size:.8rem; max-width:240px;
+            pointer-events:none; box-shadow:0 4px 16px rgba(0,0,0,.2);">
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@@6.1.11/index.global.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@@6.1.11/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@@6.1.11/locales/es.global.min.js"></script>
+
+    <script>
+        let calendario = null;
+        let eventoPreview = null;
+        let previewSeleccion = null;
+        let recargaPreviewTimer = null;
+        let refrescoEventosTimer = null;
+
+        const pacientesData = @Html.Raw(ViewBag.PacientesJson ?? "[]");
+        const medicosData = @Html.Raw(ViewBag.MedicosJson ?? "[]");
+
+        const HORA_INICIO = 7;
+        const HORA_FIN = 22;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            inicializarCalendario();
+            inicializarBuscadores();
+            configurarValidacionFormulario();
+
+            document.querySelectorAll('.especialidad-radio')
+                .forEach(r => r.addEventListener('change', function () {
+                    filtrarMedicosPorEspecialidad();
+                    actualizarResumenConPreviewActual();
+                    recargarCalendario();
+                }));
+
+            document.getElementById('CitaMotivo')?.addEventListener('input', function () {
+                actualizarResumenConPreviewActual();
+            });
+
+            document.getElementById('CitaMotivo')?.addEventListener('change', function () {
+                actualizarResumenConPreviewActual();
+            });
+
+            if (refrescoEventosTimer) {
+                clearInterval(refrescoEventosTimer);
+            }
+
+            refrescoEventosTimer = setInterval(() => {
+                refetchSeguroManteniendoPreview();
+            }, 60000);
+        });
+
+        function mostrarBotonLimpiarHorario() {
+            document.getElementById('btnLimpiarHorario')?.classList.remove('d-none');
+        }
+
+        function ocultarBotonLimpiarHorario() {
+            document.getElementById('btnLimpiarHorario')?.classList.add('d-none');
+        }
+
+        function getTextoSeguro(selector, fallback = 'No seleccionado') {
+            const el = document.querySelector(selector);
+            const text = el?.textContent?.trim();
+            return text ? text : fallback;
+        }
+
+        function getMotivoActual() {
+            const motivo = document.getElementById('CitaMotivo')?.value?.trim();
+            return motivo ? motivo : 'Sin motivo ingresado';
+        }
+
+        function getEspecialidadActual() {
+            const radio = document.querySelector('.especialidad-radio:checked');
+            if (!radio) return 'Todas las especialidades';
+
+            const label = document.querySelector(`label[for="${radio.id}"]`);
+            const texto = label?.textContent?.trim();
+
+            return texto || 'Todas las especialidades';
+        }
+
+        function resetResumenHorario() {
+            document.getElementById('resumen-horario').innerHTML = `
+                <div class="resumen-vacio">
+                    Seleccioná un horario en el calendario →
+                </div>
+            `;
+            ocultarBotonLimpiarHorario();
+        }
+
+        function esEventoPreview(evento) {
+            return evento?.extendedProps?.tipo === 'preview';
+        }
+
+        function limpiarPreviewVisual() {
+            if (eventoPreview) {
+                eventoPreview.remove();
+                eventoPreview = null;
+            }
+        }
+
+        function guardarPreviewState(start, end) {
+            previewSeleccion = {
+                start: new Date(start),
+                end: new Date(end)
+            };
+        }
+
+        function obtenerPreviewActual() {
+            if (!previewSeleccion) return null;
+
+            return {
+                start: new Date(previewSeleccion.start),
+                end: new Date(previewSeleccion.end)
+            };
+        }
+
+        function actualizarResumenConPreviewActual() {
+            const preview = obtenerPreviewActual();
+            if (!preview) {
+                resetResumenHorario();
+                return;
+            }
+
+            actualizarResumenHorario(preview.start, preview.end);
+        }
+
+        function restaurarPreviewSiExiste() {
+            if (!previewSeleccion || !calendario) return;
+
+            limpiarPreviewVisual();
+
+            eventoPreview = calendario.addEvent({
+                start: new Date(previewSeleccion.start),
+                end: new Date(previewSeleccion.end),
+                display: 'block',
+                title: 'Nueva cita',
+                classNames: ['fc-preview-event'],
+                backgroundColor: '#8b5cf6',
+                borderColor: '#7c3aed',
+                textColor: '#ffffff',
+                editable: true,
+                startEditable: true,
+                durationEditable: true,
+                overlap: true,
+                extendedProps: {
+                    tipo: 'preview'
+                }
+            });
+
+            actualizarResumenConPreviewActual();
+
+            setTimeout(() => {
+                document.querySelectorAll('.fc-preview-event')
+                    .forEach(el => aplicarEstiloPreview(el));
+            }, 30);
+        }
+
+        function refetchSeguroManteniendoPreview() {
+            if (!calendario) return;
+
+            if (recargaPreviewTimer) {
+                clearTimeout(recargaPreviewTimer);
+                recargaPreviewTimer = null;
+            }
+
+            calendario.refetchEvents();
+
+            if (previewSeleccion) {
+                recargaPreviewTimer = setTimeout(() => {
+                    restaurarPreviewSiExiste();
+                }, 80);
+            } else {
+                resetResumenHorario();
+            }
+        }
+
+        function limpiarHorarioSeleccionado() {
+            document.getElementById('inputInicio').value = '';
+            document.getElementById('inputFin').value = '';
+
+            previewSeleccion = null;
+
+            limpiarPreviewVisual();
+
+            if (calendario) {
+                calendario.unselect();
+            }
+
+            if (recargaPreviewTimer) {
+                clearTimeout(recargaPreviewTimer);
+                recargaPreviewTimer = null;
+            }
+
+            resetResumenHorario();
+        }
+
+        function configurarValidacionFormulario() {
+            const form = document.getElementById('formCita');
+
+            form.addEventListener('submit', function (e) {
+                const pacienteId = document.getElementById('PacienteId')?.value?.trim() || '';
+                const medicoId = document.getElementById('MedicoId')?.value?.trim() || '';
+                const inicio = document.getElementById('inputInicio')?.value?.trim() || '';
+                const fin = document.getElementById('inputFin')?.value?.trim() || '';
+                const motivo = document.getElementById('CitaMotivo')?.value?.trim() || '';
+
+                let errores = [];
+
+                if (!pacienteId) errores.push('Debe seleccionar un paciente');
+                if (!medicoId) errores.push('Debe seleccionar un médico');
+                if (!inicio || !fin) errores.push('Debe seleccionar un horario en el calendario');
+                if (!motivo) errores.push('Debe ingresar el motivo de la consulta');
+
+                if (errores.length > 0) {
+                    e.preventDefault();
+
+                    let mensajeError = '<strong>Por favor complete los siguientes campos:</strong><ul class="mb-0 mt-2">';
+                    errores.forEach(error => {
+                        mensajeError += `<li>${error}</li>`;
+                    });
+                    mensajeError += '</ul>';
+
+                    const alertaExistente = document.querySelector('.alert-validacion-custom');
+                    if (alertaExistente) alertaExistente.remove();
+
+                    const alerta = document.createElement('div');
+                    alerta.className = 'alert alert-danger alert-dismissible fade show shadow alert-validacion-custom';
+                    alerta.style.cssText = 'position:fixed; top:20px; right:20px; z-index:9999; min-width:320px; max-width:420px;';
+                    alerta.innerHTML = `
+                        ${mensajeError}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.body.appendChild(alerta);
+
+                    setTimeout(() => {
+                        if (alerta && alerta.parentNode) {
+                            bootstrap.Alert.getOrCreateInstance(alerta).close();
+                        }
+                    }, 5000);
+
+                    return false;
+                }
+            });
+        }
+
+        function pad(n) {
+            return String(n).padStart(2, '0');
+        }
+
+        function formatLocal(date) {
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
+        function formatDisplay(date) {
+            const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+            return `${dias[date.getDay()]} ${pad(date.getDate())} ${meses[date.getMonth()]} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
+        function calcularDuracion(start, end) {
+            const duracionMs = end - start;
+            return Math.round(duracionMs / 60000);
+        }
+
+        function buildUrl() {
+            const medico = document.getElementById('MedicoId').value;
+            const radio = document.querySelector('.especialidad-radio:checked');
+            const especialidad = radio ? radio.value : '';
+
+            const params = new URLSearchParams();
+            if (medico) params.append('medicoId', medico);
+            if (especialidad) params.append('especialidadId', especialidad);
+
+            const query = params.toString();
+            return '/Cita/EventosCalendario' + (query ? '?' + query : '');
+        }
+
+        function aplicarEstiloPreview(el) {
+            if (!el) return;
+
+            el.style.setProperty('background-color', '#8b5cf6', 'important');
+            el.style.setProperty('background', '#8b5cf6', 'important');
+            el.style.setProperty('border-color', '#7c3aed', 'important');
+            el.style.setProperty('border-left', '3px solid #7c3aed', 'important');
+            el.style.setProperty('color', '#ffffff', 'important');
+
+            const inner = el.querySelector('.fc-event-main');
+            if (inner) {
+                inner.style.setProperty('background-color', '#8b5cf6', 'important');
+                inner.style.setProperty('color', '#ffffff', 'important');
+            }
+        }
+
+        function actualizarResumenHorario(start, end) {
+            const duracion = calcularDuracion(start, end);
+            const pacienteNombre = getTextoSeguro('#nombrePacienteSeleccionado', 'No seleccionado');
+            const medicoNombre = getTextoSeguro('#nombreMedicoSeleccionado', 'No seleccionado');
+            const especialidad = getEspecialidadActual();
+            const motivo = getMotivoActual();
+
+            document.getElementById('resumen-horario').innerHTML = `
+                <div class="resumen-card">
+                    <div class="resumen-titulo">Resumen de la cita</div>
+
+                    <div class="resumen-grid">
+                        <div class="resumen-item">
+                            <span class="resumen-label">Inicio</span>
+                            <div class="resumen-value">${formatDisplay(start)}</div>
+                        </div>
+
+                        <div class="resumen-item">
+                            <span class="resumen-label">Fin</span>
+                            <div class="resumen-value">${formatDisplay(end)}</div>
+                        </div>
+
+                        <div class="resumen-item">
+                            <span class="resumen-label">Duración</span>
+                            <div class="resumen-value">${duracion} min</div>
+                        </div>
+
+                        <div class="resumen-item">
+                            <span class="resumen-label">Paciente</span>
+                            <div class="resumen-value">${escapeHtml(pacienteNombre)}</div>
+                        </div>
+
+                        <div class="resumen-item">
+                            <span class="resumen-label">Médico</span>
+                            <div class="resumen-value">${escapeHtml(medicoNombre)}</div>
+                        </div>
+
+                        <div class="resumen-item">
+                            <span class="resumen-label">Especialidad</span>
+                            <div class="resumen-value">${escapeHtml(especialidad)}</div>
+                        </div>
+
+                        <div class="resumen-item">
+                            <span class="resumen-label">Motivo</span>
+                            <div class="resumen-value">${escapeHtml(motivo)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            mostrarBotonLimpiarHorario();
+        }
+
+        function redondearASiguienteMediaHora(fecha) {
+            const nueva = new Date(fecha);
+            nueva.setSeconds(0, 0);
+
+            const minutos = nueva.getMinutes();
+
+            if (minutos === 0 || minutos === 30) {
+                return nueva;
+            }
+
+            if (minutos < 30) {
+                nueva.setMinutes(30);
+            } else {
+                nueva.setHours(nueva.getHours() + 1);
+                nueva.setMinutes(0);
+            }
+
+            return nueva;
+        }
+
+        function generarFondosDisponibles(rangoInicio, rangoFin) {
+            const bloques = [];
+            const ahora = new Date();
+
+            const inicio = new Date(rangoInicio);
+            const fin = new Date(rangoFin);
+
+            for (let dia = new Date(inicio); dia < fin; dia.setDate(dia.getDate() + 1)) {
+                const fechaDia = new Date(dia);
+                const numeroDia = fechaDia.getDay();
+
+                if (numeroDia === 0) continue;
+
+                const inicioDia = new Date(
+                    fechaDia.getFullYear(),
+                    fechaDia.getMonth(),
+                    fechaDia.getDate(),
+                    HORA_INICIO, 0, 0, 0
+                );
+
+                const finDia = new Date(
+                    fechaDia.getFullYear(),
+                    fechaDia.getMonth(),
+                    fechaDia.getDate(),
+                    HORA_FIN, 0, 0, 0
+                );
+
+                let inicioDisponible = new Date(inicioDia);
+
+                const esHoy = fechaDia.toDateString() === ahora.toDateString();
+                const esDiaPasado = finDia <= ahora;
+
+                if (esDiaPasado) continue;
+
+                if (esHoy) {
+                    inicioDisponible = redondearASiguienteMediaHora(ahora);
+
+                    if (inicioDisponible < inicioDia) {
+                        inicioDisponible = new Date(inicioDia);
+                    }
+                }
+
+                if (inicioDisponible < finDia) {
+                    bloques.push({
+                        start: new Date(inicioDisponible),
+                        end: new Date(finDia),
+                        display: 'background',
+                        classNames: ['fc-disponible-bg']
+                    });
+                }
+            }
+
+            return bloques;
+        }
+
+        function crearPreviewDesdeFechas(start, end) {
+            if (!calendario) return;
+
+            calendario.unselect();
+
+            guardarPreviewState(start, end);
+            limpiarPreviewVisual();
+
+            document.getElementById('inputInicio').value = formatLocal(start);
+            document.getElementById('inputFin').value = formatLocal(end);
+
+            eventoPreview = calendario.addEvent({
+                start: new Date(start),
+                end: new Date(end),
+                display: 'block',
+                title: 'Nueva cita',
+                classNames: ['fc-preview-event'],
+                backgroundColor: '#8b5cf6',
+                borderColor: '#7c3aed',
+                textColor: '#ffffff',
+                editable: true,
+                startEditable: true,
+                durationEditable: true,
+                overlap: true,
+                extendedProps: {
+                    tipo: 'preview'
+                }
+            });
+
+            actualizarResumenHorario(new Date(start), new Date(end));
+
+            setTimeout(() => {
+                document.querySelectorAll('.fc-preview-event')
+                    .forEach(el => aplicarEstiloPreview(el));
+            }, 30);
+        }
+
+        function inicializarCalendario() {
+            const el = document.getElementById('calendario');
+
+            calendario = new FullCalendar.Calendar(el, {
+                locale: 'es',
+                initialView: 'timeGridWeek',
+
+                selectable: true,
+                selectMirror: true,
+                unselectAuto: false,
+                selectMinDistance: 0,
+                selectOverlap: true,
+                eventOverlap: true,
+
+                editable: true,
+                eventStartEditable: true,
+                eventDurationEditable: true,
+                eventResizableFromStart: true,
+
+                allDaySlot: false,
+                slotMinTime: '07:00:00',
+                slotMaxTime: '22:00:00',
+                slotDuration: '00:30:00',
+                slotLabelInterval: '00:30:00',
+                snapDuration: '00:30:00',
+                scrollTime: '07:00:00',
+                height: 760,
+                nowIndicator: true,
+                expandRows: true,
+                firstDay: 1,
+                weekends: true,
+
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'timeGridDay,timeGridWeek,dayGridMonth'
+                },
+
+                buttonText: {
+                    today: 'Hoy',
+                    month: 'Mes',
+                    week: 'Semana',
+                    day: 'Día'
+                },
+
+                events: async function (info, successCallback, failureCallback) {
+                    try {
+                        const response = await fetch(buildUrl());
+                        const citas = await response.json();
+                        const fondos = generarFondosDisponibles(info.start, info.end);
+                        successCallback([...fondos, ...citas]);
+                    } catch (error) {
+                        failureCallback(error);
+                    }
+                },
+
+                eventClassNames: function (arg) {
+                    const p = arg.event.extendedProps || {};
+
+                    if (p.tipo === 'preview') return ['fc-preview-event'];
+                    if (p.tipo !== 'cita') return [];
+
+                    const estado = (p.estado || '').toLowerCase();
+
+                    if (estado === 'programada') return ['fc-programada-event'];
+                    if (estado === 'confirmada') return ['fc-confirmada-event'];
+                    if (estado === 'atendida') return ['fc-atendida-event'];
+                    if (estado === 'noasistio') return ['fc-noasistio-event'];
+
+                    return [];
+                },
+
+                eventAllow: function (dropInfo, draggedEvent) {
+                    if (!esEventoPreview(draggedEvent)) return false;
+
+                    const ahora = new Date(Date.now() - 60000);
+                    if (dropInfo.start <= ahora) return false;
+                    if (dropInfo.start.getDay() === 0) return false;
+
+                    return true;
+                },
+
+                selectAllow: function (info) {
+                    const ahora = new Date(Date.now() - 60000);
+                    if (info.start <= ahora) return false;
+                    if (info.start.getDay() === 0) return false;
+                    return true;
+                },
+
+                eventDrop: function (info) {
+                    if (!esEventoPreview(info.event)) {
+                        info.revert();
+                        return;
+                    }
+
+                    const start = info.event.start;
+                    const end = info.event.end;
+
+                    guardarPreviewState(start, end);
+
+                    document.getElementById('inputInicio').value = formatLocal(start);
+                    document.getElementById('inputFin').value = formatLocal(end);
+
+                    actualizarResumenHorario(start, end);
+
+                    setTimeout(() => aplicarEstiloPreview(info.el), 0);
+                },
+
+                eventResize: function (info) {
+                    if (!esEventoPreview(info.event)) {
+                        info.revert();
+                        return;
+                    }
+
+                    const start = info.event.start;
+                    const end = info.event.end;
+
+                    guardarPreviewState(start, end);
+
+                    document.getElementById('inputInicio').value = formatLocal(start);
+                    document.getElementById('inputFin').value = formatLocal(end);
+
+                    actualizarResumenHorario(start, end);
+
+                    setTimeout(() => aplicarEstiloPreview(info.el), 0);
+                },
+
+                select: function (info) {
+                    crearPreviewDesdeFechas(info.start, info.end);
+                },
+
+                dateClick: function (info) {
+                    const ahora = new Date(Date.now() - 60000);
+
+                    if (info.date <= ahora) return;
+                    if (info.date.getDay() === 0) return;
+
+                    const start = new Date(info.date);
+                    const end = new Date(info.date);
+                    end.setMinutes(end.getMinutes() + 30);
+
+                    crearPreviewDesdeFechas(start, end);
+                },
+
+                eventClick: function (info) {
+                    if (!esEventoPreview(info.event)) return;
+
+                    if (info.jsEvent.detail === 2) {
+                        limpiarHorarioSeleccionado();
+                    }
+                },
+
+                eventContent: function (arg) {
+                    const p = arg.event.extendedProps || {};
+                    const horaInicio = arg.event.start
+                        ? `${pad(arg.event.start.getHours())}:${pad(arg.event.start.getMinutes())}`
+                        : '';
+                    const horaFin = arg.event.end
+                        ? `${pad(arg.event.end.getHours())}:${pad(arg.event.end.getMinutes())}`
+                        : '';
+
+                    if (p.tipo === 'preview') {
+                        return {
+                            html: `
+                                <div>
+                                    <div class="fc-event-title">Nueva cita</div>
+                                    <div class="fc-event-time">${horaInicio} - ${horaFin}</div>
+                                </div>
+                            `
+                        };
+                    }
+
+                    if (p.tipo === 'cita') {
+                        return {
+                            html: `
+                                <div>
+                                    <div class="fc-event-title">${escapeHtml(arg.event.title ?? '')}</div>
+                                    <div class="fc-event-time">${horaInicio} - ${horaFin}</div>
+                                    <div style="font-size:.68rem; opacity:.95;">${escapeHtml(p.especialidad ?? '')}</div>
+                                </div>
+                            `
+                        };
+                    }
+
+                    return true;
+                },
+
+                eventMouseEnter: function (info) {
+                    const p = info.event.extendedProps || {};
+                    if (p.tipo !== 'cita') return;
+
+                    const tooltip = document.getElementById('tooltip-cita');
+                    tooltip.innerHTML = `
+                        <div class="fw-semibold mb-1">${escapeHtml(p.pacienteNombre ?? '')}</div>
+                        <div><strong>Médico:</strong> ${escapeHtml(p.medicoNombre ?? '')}</div>
+                        <div><strong>Especialidad:</strong> ${escapeHtml(p.especialidad ?? '')}</div>
+                        <div><strong>Motivo:</strong> ${escapeHtml(p.motivo ?? '')}</div>
+                        <div><strong>Estado:</strong> ${escapeHtml(p.estado ?? '')}</div>
+                    `;
+                    tooltip.style.display = 'block';
+                },
+
+                eventMouseLeave: function () {
+                    const tooltip = document.getElementById('tooltip-cita');
+                    tooltip.style.display = 'none';
+                },
+
+                eventDidMount: function (info) {
+                    if (esEventoPreview(info.event)) {
+                        aplicarEstiloPreview(info.el);
+                        info.el.style.cursor = 'pointer';
+                        return;
+                    }
+
+                    info.el.style.cursor = 'pointer';
+                }
+            });
+
+            calendario.render();
+
+            document.addEventListener('mousemove', function (e) {
+                const tooltip = document.getElementById('tooltip-cita');
+                if (tooltip.style.display === 'block') {
+                    tooltip.style.left = (e.clientX + 16) + 'px';
+                    tooltip.style.top = (e.clientY + 16) + 'px';
+                }
+            });
+        }
+
+        function recargarCalendario() {
+            refetchSeguroManteniendoPreview();
+        }
+
+        function inicializarBuscadores() {
+            const inputPaciente = document.getElementById('buscarPaciente');
+            const resultadosPaciente = document.getElementById('resultadosPaciente');
+
+            inputPaciente.addEventListener('input', function () {
+                const valor = this.value.trim().toLowerCase();
+
+                if (!valor) {
+                    resultadosPaciente.style.display = 'none';
+                    return;
+                }
+
+                const filtrados = pacientesData.filter(p =>
+                    (p.nombre || '').toLowerCase().includes(valor) ||
+                    (p.dpi || '').toLowerCase().includes(valor)
+                );
+
+                if (!filtrados.length) {
+                    resultadosPaciente.innerHTML = `<div class="resultado-item text-muted">Sin resultados</div>`;
+                    resultadosPaciente.style.display = 'block';
+                    return;
+                }
+
+                resultadosPaciente.innerHTML = filtrados.map(p => `
+                    <div class="resultado-item"
+                         onclick="seleccionarPaciente(${p.id}, '${escapeJs(p.nombre)}', '${escapeJs(p.dpi)}')">
+                        <div class="fw-semibold">${escapeHtml(p.nombre)}</div>
+                        <div class="small text-muted">DPI: ${escapeHtml(p.dpi)}</div>
+                    </div>
+                `).join('');
+
+                resultadosPaciente.style.display = 'block';
+            });
+
+            const inputMedico = document.getElementById('buscarMedico');
+            const resultadosMedico = document.getElementById('resultadosMedico');
+
+            inputMedico.addEventListener('input', function () {
+                const valor = this.value.trim().toLowerCase();
+
+                if (!valor) {
+                    resultadosMedico.style.display = 'none';
+                    return;
+                }
+
+                const especialidadSeleccionada = document.querySelector('.especialidad-radio:checked')?.value || '';
+
+                let base = medicosData;
+                if (especialidadSeleccionada) {
+                    base = base.filter(m => String(m.especialidadId) === String(especialidadSeleccionada));
+                }
+
+                const filtrados = base.filter(m =>
+                    (m.nombre || '').toLowerCase().includes(valor) ||
+                    (m.colegiado || '').toLowerCase().includes(valor) ||
+                    (m.especialidad || '').toLowerCase().includes(valor)
+                );
+
+                if (!filtrados.length) {
+                    resultadosMedico.innerHTML = `<div class="resultado-item text-muted">Sin resultados</div>`;
+                    resultadosMedico.style.display = 'block';
+                    return;
+                }
+
+                resultadosMedico.innerHTML = filtrados.map(m => `
+                    <div class="resultado-item"
+                         onclick="seleccionarMedico(${m.id}, '${escapeJs(m.nombre)}', '${escapeJs(m.colegiado)}', '${escapeJs(m.especialidad)}', ${m.especialidadId})">
+                        <div class="fw-semibold">${escapeHtml(m.nombre)}</div>
+                        <div class="small text-muted">${escapeHtml(m.especialidad)} · Col. ${escapeHtml(m.colegiado)}</div>
+                    </div>
+                `).join('');
+
+                resultadosMedico.style.display = 'block';
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('#buscarPaciente') && !e.target.closest('#resultadosPaciente')) {
+                    resultadosPaciente.style.display = 'none';
+                }
+
+                if (!e.target.closest('#buscarMedico') && !e.target.closest('#resultadosMedico')) {
+                    resultadosMedico.style.display = 'none';
+                }
+            });
+        }
+
+        function seleccionarPaciente(id, nombre, dpi) {
+            document.getElementById('PacienteId').value = id;
+            document.getElementById('buscarPaciente').style.display = 'none';
+            document.getElementById('resultadosPaciente').style.display = 'none';
+            document.getElementById('nombrePacienteSeleccionado').textContent = `${nombre} · DPI: ${dpi}`;
+            document.getElementById('pacienteSeleccionado').style.display = 'flex';
+
+            actualizarResumenConPreviewActual();
+        }
+
+        function limpiarPaciente() {
+            document.getElementById('PacienteId').value = '';
+            document.getElementById('buscarPaciente').value = '';
+            document.getElementById('buscarPaciente').style.display = 'block';
+            document.getElementById('pacienteSeleccionado').style.display = 'none';
+            document.getElementById('nombrePacienteSeleccionado').textContent = '';
+
+            actualizarResumenConPreviewActual();
+        }
+
+        function seleccionarMedico(id, nombre, colegiado, especialidad, especialidadId) {
+            document.getElementById('MedicoId').value = id;
+            document.getElementById('buscarMedico').style.display = 'none';
+            document.getElementById('resultadosMedico').style.display = 'none';
+            document.getElementById('nombreMedicoSeleccionado').textContent = `${nombre} · ${especialidad}`;
+            document.getElementById('medicoSeleccionado').style.display = 'flex';
+
+            actualizarResumenConPreviewActual();
+            recargarCalendario();
+        }
+
+        function limpiarMedico() {
+            document.getElementById('MedicoId').value = '';
+            document.getElementById('buscarMedico').value = '';
+            document.getElementById('buscarMedico').style.display = 'block';
+            document.getElementById('medicoSeleccionado').style.display = 'none';
+            document.getElementById('nombreMedicoSeleccionado').textContent = '';
+
+            actualizarResumenConPreviewActual();
+            recargarCalendario();
+        }
+
+        function filtrarMedicosPorEspecialidad() {
+            const especialidadSeleccionada = document.querySelector('.especialidad-radio:checked')?.value || '';
+            const medicoId = document.getElementById('MedicoId').value;
+
+            if (!medicoId || !especialidadSeleccionada) return;
+
+            const medicoActual = medicosData.find(m => String(m.id) === String(medicoId));
+            if (!medicoActual) return;
+
+            if (String(medicoActual.especialidadId) !== String(especialidadSeleccionada)) {
+                limpiarMedico();
+            }
+        }
+
+        function escapeHtml(texto) {
+            return String(texto ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function escapeJs(texto) {
+            return String(texto ?? '')
+                .replaceAll('\\', '\\\\')
+                .replaceAll("'", "\\'")
+                .replaceAll('"', '\\"')
+                .replaceAll('\n', '\\n')
+                .replaceAll('\r', '\\r');
+        }
+    </script>
+}

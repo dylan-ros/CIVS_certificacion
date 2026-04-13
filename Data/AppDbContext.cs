@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using CIVS_certi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace CIVS_certi.Data
 {
@@ -8,7 +9,10 @@ namespace CIVS_certi.Data
         {
         }
 
-        // Aquí irán tus DbSet
-        // public DbSet<Paciente> Pacientes { get; set; }
+        public DbSet<Paciente> Pacientes { get; set; }
+        public DbSet<Medico> Medicos { get; set; }
+        public DbSet<HorarioMedico> HorarioMedicos { get; set; }
+        public DbSet<Especialidad> Especialidades { get; set; }
+        public DbSet<Cita> Citas { get; set; }
     }
 }
